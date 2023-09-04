@@ -1,13 +1,25 @@
 // src\App.js
-import React from 'react';
+import React, { useState } from 'react';
 import EmailForm from './components/EmailForm';
+import RegisterComponent from './components/RegisterComponent';
+import LoginComponent from './components/LoginComponent';
 
 function App() {
+  const [user, setUser] = useState(null);
+
   return (
     <div>
-      <h1>Email App</h1>
-      <EmailForm />
-    </div>
+      <h1>MERN Mail</h1>
+      {user ? (
+        <EmailForm user={user} />
+      ) : (
+        <>
+          <RegisterComponent />
+          <LoginComponent onLogin={setUser} />
+        </>
+      )}
+    </div> 
+
   );
 }
 

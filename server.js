@@ -16,6 +16,14 @@ mongoose.connect(mongodbUri, {
   .then(() => console.log("Connected to MongoDB"))
   .catch((error) => console.error("Error connecting to MongoDB:", error));
 
+  const userSchema = new mongoose.Schema({
+    name: String,
+    password: String,
+    emailId: { type: String, unique: true },
+  });
+  
+  const User = mongoose.model('User', userSchema);
+  
   const emailSchema = new mongoose.Schema({
   to: String,
   subject: String,
@@ -24,24 +32,54 @@ mongoose.connect(mongodbUri, {
 
 const Email = mongoose.model('Email', emailSchema);
 
+app.post('/register', async (req, res) => {
+  try {
+    const { name, password, emailId } = req.body;
+    const user = new User({ name, password, emailId: emailId + '@mernmail' });
+    await user.save();
+    res.status(200).send({ message: 'User registered successfully' });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+app.post('/login', async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
+    const user = await User.findOne({ emailId: emailId + '@mernmail' });
+    if (user && user.password === password) {
+      res.status(200).send({ message: 'Login successful', user });
+    } else {
+      res.status(400).send({ message: 'Invalid credentials' });
+    }
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'biswasprasana004@gmail.com',
+    pass: 'jgttdeiivzczcwba',
+  },
+});
+
 app.post('/send-email', async (req, res) => {
   try {
-    const { to, subject, message } = req.body;
-    const email = new Email({ to, subject, message });
+    const { userId, to, subject, message } = req.body;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(400).send({ message: 'User not found' });
+    }
+
+    const email = new Email({ to, subject, message, from: user.emailId });
     await email.save();
 
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'your-email@gmail.com',
-        pass: 'your-email-password',
-      },
-    });
-    
-    // Inside the /send-email route
     transporter.sendMail({
-      from: 'your-email@gmail.com',
+      from: user.emailId,
       to,
       subject,
       text: message,
@@ -51,7 +89,7 @@ app.post('/send-email', async (req, res) => {
       }
       console.log('Message sent: %s', info.messageId);
     });
-    
+
     res.status(200).send({ message: 'Email sent successfully' });
   } catch (error) {
     res.status(500).send({ error: error.message });
