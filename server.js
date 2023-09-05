@@ -24,10 +24,12 @@ mongoose.connect(mongodbUri, {
   
   const User = mongoose.model('User', userSchema);
   
-  const emailSchema = new mongoose.Schema({
+const emailSchema = new mongoose.Schema({
+  from: String,
   to: String,
   subject: String,
   message: String,
+  date: { type: Date, default: Date.now },
 });
 
 const Email = mongoose.model('Email', emailSchema);
@@ -91,6 +93,16 @@ app.post('/send-email', async (req, res) => {
     });
 
     res.status(200).send({ message: 'Email sent successfully' });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+app.get('/fetch-emails/:emailId', async (req, res) => {
+  try {
+    const { emailId } = req.params;
+    const emails = await Email.find({ $or: [{ from: emailId }, { to: emailId }] });
+    res.status(200).send({ emails });
   } catch (error) {
     res.status(500).send({ error: error.message });
   }
